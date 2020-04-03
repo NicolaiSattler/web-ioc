@@ -12,7 +12,7 @@ namespace web_ioc
     {
         public void Configuration(IAppBuilder app)
         {
-            AuthConfig.Setup(app);
+            //AuthConfig.Setup(app);
 
             AreaRegistration.RegisterAllAreas();
             GlobalConfiguration.Configure(WebApiConfig.Register);
