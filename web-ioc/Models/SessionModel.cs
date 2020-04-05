@@ -4,14 +4,16 @@ namespace web_ioc.Models
 {
     public class SessionModel : ISessionModel
     {
-        public  Guid Id { get; }
+        public Guid Id { get; }
 
         public bool Value { get; set; }
 
-        public SessionModel(ISessionStore store)
+        public SessionModel()
         {
             Id = Guid.NewGuid();
-
+        }
+        public SessionModel(ISessionStore store) : this()
+        {
             store.Set(this);
         }
 

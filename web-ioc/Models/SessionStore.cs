@@ -26,7 +26,7 @@ namespace web_ioc.Models
 
         public void Set(ISessionModel session)
         {
-            this.Cache.Add(session.Id.ToString(), session, new CacheItemPolicy { SlidingExpiration = new TimeSpan(0, 0, 10) });
+            this.Cache.Add(session.Id.ToString(), session, new CacheItemPolicy { SlidingExpiration = new TimeSpan(1, 0, 0) });
         }
     }
 }

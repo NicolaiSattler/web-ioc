@@ -5,6 +5,7 @@ using Autofac.Integration.WebApi;
 using Microsoft.AspNet.SignalR;
 using Microsoft.AspNet.SignalR.Infrastructure;
 using Owin;
+using System.Configuration;
 using System.Diagnostics;
 using System.Web;
 using System.Web.Http;
@@ -16,39 +17,55 @@ namespace web_ioc
 {
     public static class IocConfig
     {
+        private static string _cookiename;
         internal static IContainer Container { get; set; }
 
-        private static ISessionModel SetupSession(IComponentContext context)
+        private static ISessionModel SetupSession<T>(IComponentContext context) where T : class, ISessionModel, new()
         {
             context.TryResolve<ISessionStore>(out var store);
 
-            ISessionModel session = null;
-            var cookie = HttpContext.Current.Request.Cookies["iocHUB"]?.Value;
+            var cookie = HttpContext.Current.Request.Cookies[SessionName]?.Value;
 
+            ISessionModel session;
             if (!System.Guid.TryParse(cookie, out var sessionID))
             {
-                session = CreateSession(store);
+                session = CreateSession<T>(store);
             }
             else
             {
-                session = store.Contains(sessionID) 
+                session = store.Contains(sessionID)
                     ? store.Get(sessionID)
-                    : CreateSession(store);
+                    : CreateSession<T>(store);
             }
 
             return session;
         }
-
-        private static ISessionModel CreateSession(ISessionStore store)
+        private static string SessionName
         {
-            var session = new SessionModel(store);
-            HttpContext.Current.Response.Cookies.Add(new HttpCookie("iocHUB", $"{session.Id}") 
+            get
             {
-                Secure = false, 
-                Shareable = false, 
-                HttpOnly = true, 
-                SameSite = SameSiteMode.Strict, 
-                Path = "/" 
+                if (string.IsNullOrEmpty(_cookiename))
+                {
+                    _cookiename = ConfigurationManager.AppSettings["sessionCookieName"];
+                }
+                return _cookiename;
+            }
+        }
+        private static ISessionModel CreateSession<T>(ISessionStore store) where T : class, ISessionModel, new()
+        {
+            var session = new T();
+
+            store.Set(session);
+
+            if (HttpContext.Current?.Response == null) return null;
+
+            HttpContext.Current.Response.Cookies.Add(new HttpCookie(SessionName, $"{session.Id}")
+            {
+                Secure = HttpContext.Current.Request.IsSecureConnection,
+                Shareable = false,
+                HttpOnly = true,
+                SameSite = SameSiteMode.Strict,
+                Path = "/"
             });
             return session;
         }
@@ -84,7 +101,7 @@ namespace web_ioc
         private static void RegisterTypes(ContainerBuilder builder)
         {
             builder.RegisterInstance(GlobalHost.ConnectionManager).As<IConnectionManager>();
-            builder.Register(ctx => SetupSession(ctx)).As<ISessionModel>().ExternallyOwned();
+            builder.Register(ctx => SetupSession<SessionModel>(ctx)).As<ISessionModel>().ExternallyOwned();
             builder.RegisterType<SessionStore>().As<ISessionStore>().SingleInstance();
             //Hub does not support InstancePerRequest...
             builder.RegisterType<LegendService>().As<ILegendService>().InstancePerLifetimeScope();
