@@ -20,22 +20,22 @@ namespace web_ioc
         private static string _cookiename;
         internal static IContainer Container { get; set; }
 
-        private static ISessionModel SetupSession<T>(IComponentContext context) where T : class, ISessionModel, new()
+        private static I SetupSession<T, I>(IComponentContext context) where T : I, new() where I : ISessionModel
         {
             context.TryResolve<ISessionStore>(out var store);
 
             var cookie = HttpContext.Current.Request.Cookies[SessionName]?.Value;
 
-            ISessionModel session;
+            I session;
             if (!System.Guid.TryParse(cookie, out var sessionID))
             {
-                session = CreateSession<T>(store);
+                session = CreateSession<T, I>(store);
             }
             else
             {
                 session = store.Contains(sessionID)
-                    ? store.Get(sessionID)
-                    : CreateSession<T>(store);
+                    ? (I)store.Get(sessionID)
+                    : CreateSession<T, I>(store);
             }
 
             return session;
@@ -51,13 +51,13 @@ namespace web_ioc
                 return _cookiename;
             }
         }
-        private static ISessionModel CreateSession<T>(ISessionStore store) where T : class, ISessionModel, new()
+        private static I CreateSession<T, I>(ISessionStore store) where T : I, new() where I : ISessionModel
         {
             var session = new T();
 
             store.Set(session);
 
-            if (HttpContext.Current?.Response == null) return null;
+            if (HttpContext.Current?.Response == null) return default(I);
 
             HttpContext.Current.Response.Cookies.Add(new HttpCookie(SessionName, $"{session.Id}")
             {
@@ -101,7 +101,12 @@ namespace web_ioc
         private static void RegisterTypes(ContainerBuilder builder)
         {
             builder.RegisterInstance(GlobalHost.ConnectionManager).As<IConnectionManager>();
-            builder.Register(ctx => SetupSession<SessionModel>(ctx)).As<ISessionModel>().ExternallyOwned();
+            // in online we have to register the IsessionModel because all the online Components will use this interface.
+            // but when we create the session we habe to create it with a GribSession / IGribSession to ensure the
+            // controllers / services can use the Grib specific parts.
+            builder.Register(ctx => SetupSession<GribSession, IGribSession>(ctx)).As<ISessionModel>().ExternallyOwned();
+            // in grib we have to register the IGribSession because all the grib components will use this interface.
+            builder.Register(ctx => SetupSession<GribSession, IGribSession>(ctx)).As<IGribSession>().ExternallyOwned();
             builder.RegisterType<SessionStore>().As<ISessionStore>().SingleInstance();
             //Hub does not support InstancePerRequest...
             builder.RegisterType<LegendService>().As<ILegendService>().InstancePerLifetimeScope();

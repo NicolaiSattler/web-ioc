@@ -235,6 +235,8 @@
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
     <Compile Include="Hubs\TestHub.cs" />
+    <Compile Include="Models\GribSession.cs" />
+    <Compile Include="Models\IGribSession.cs" />
     <Compile Include="Models\ILegendService.cs" />
     <Compile Include="Models\ISessionStore.cs" />
     <Compile Include="Models\ISessionBasesClass.cs" />
