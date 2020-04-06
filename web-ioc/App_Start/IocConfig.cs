@@ -110,6 +110,7 @@ namespace web_ioc
             builder.RegisterType<SessionStore>().As<ISessionStore>().SingleInstance();
             //Hub does not support InstancePerRequest...
             builder.RegisterType<LegendService>().As<ILegendService>().InstancePerLifetimeScope();
+            builder.RegisterType<GribService>().As<IGribService>().InstancePerLifetimeScope();
         }
 
         internal static void SetupContainer(IAppBuilder app)
